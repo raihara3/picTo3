@@ -4,9 +4,8 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import type { ImageSource } from "../store/imageStore";
+import type { SideColorMode } from "../store/settingsStore";
 import { createTextureSource } from "./textureSource";
-
-const SIDE_COLOR = 0xc8c4bd; // neutral extrusion wall
 
 interface StageRefs {
   renderer: THREE.WebGLRenderer;
@@ -41,10 +40,34 @@ function frameObject(camera: THREE.PerspectiveCamera, controls: OrbitControls, o
  * by the pipeline, textured with the source image; exposes reset-view and glb
  * export. Plain three.js behind a thin hook — three objects live in refs.
  */
-export function useThreeStage(geometry: THREE.BufferGeometry | null, source: ImageSource | null) {
+export function useThreeStage(
+  geometry: THREE.BufferGeometry | null,
+  source: ImageSource | null,
+  sideColorMode: SideColorMode,
+  sideColor: string
+) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const refs = useRef<StageRefs | null>(null);
   const framedRef = useRef(false);
+
+  // Keep the side-wall material in sync with the chosen mode/colour. In "edge"
+  // mode the walls sample the image (boundary colour via the side-wall UVs); in
+  // "custom" mode they use a flat colour. Reads from refs so both this effect
+  // and the texture effect can re-apply it.
+  const applySideMaterial = useCallback(() => {
+    const current = refs.current;
+    if (!current) {
+      return;
+    }
+    if (sideColorMode === "edge") {
+      current.sideMaterial.map = current.texture;
+      current.sideMaterial.color.set(0xffffff);
+    } else {
+      current.sideMaterial.map = null;
+      current.sideMaterial.color.set(sideColor);
+    }
+    current.sideMaterial.needsUpdate = true;
+  }, [sideColorMode, sideColor]);
 
   // ── Stage lifecycle (mount once) ─────────────────────────────────────────
   useEffect(() => {
@@ -92,7 +115,6 @@ export function useThreeStage(geometry: THREE.BufferGeometry | null, source: Ima
       metalness: 0,
     });
     const sideMaterial = new THREE.MeshStandardMaterial({
-      color: SIDE_COLOR,
       roughness: 0.9,
       metalness: 0,
     });
@@ -161,6 +183,7 @@ export function useThreeStage(geometry: THREE.BufferGeometry | null, source: Ima
       current.texture = null;
       current.capMaterial.map = null;
       current.capMaterial.needsUpdate = true;
+      applySideMaterial();
       return;
     }
     const textureSource = createTextureSource(source.image, source.naturalWidth, source.naturalHeight);
@@ -171,8 +194,14 @@ export function useThreeStage(geometry: THREE.BufferGeometry | null, source: Ima
     current.texture = texture;
     current.capMaterial.map = texture;
     current.capMaterial.needsUpdate = true;
+    applySideMaterial();
     framedRef.current = false; // re-frame on the next geometry for a new image
-  }, [source]);
+  }, [source, applySideMaterial]);
+
+  // ── Side-wall material follows the chosen colour mode ────────────────────
+  useEffect(() => {
+    applySideMaterial();
+  }, [applySideMaterial]);
 
   // ── Mesh follows the generated geometry ──────────────────────────────────
   useEffect(() => {

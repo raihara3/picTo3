@@ -34,6 +34,9 @@ export const ja = {
   "controls.settings.label": "メッシュの調整",
   "controls.smoothness": "エッジのなめらかさ",
   "controls.thickness": "厚み",
+  "controls.sideColor": "側面の色",
+  "controls.sideColor.edge": "境界色",
+  "controls.sideColor.custom": "指定色",
   "controls.processing": "生成中…",
 
   "stats.label": "生成結果",

@@ -68,12 +68,16 @@ export function buildGeometry(
     y: (0.5 - point.y / maskHeight) * worldHeight, // flip Y (image is y-down)
   });
 
-  // Simplify each loop and move it into world space.
+  // Simplify + smooth each loop and move it into world space. A fully opaque
+  // image is kept verbatim (a rectangle) so smoothing never deforms its shape.
   const polygons: Vec2[][] = [];
   for (const loop of loops) {
-    const simplified = chaikinClosed(simplifyClosed(loop, epsilon), iterations).map(toWorld);
-    if (simplified.length >= 3) {
-      polygons.push(simplified);
+    const outline = contours.fullyOpaque
+      ? loop
+      : chaikinClosed(simplifyClosed(loop, epsilon), iterations);
+    const worldPolygon = outline.map(toWorld);
+    if (worldPolygon.length >= 3) {
+      polygons.push(worldPolygon);
     }
   }
   if (polygons.length === 0) {
@@ -143,8 +147,18 @@ export function buildGeometry(
     generateTopUV(_geometry: THREE.ExtrudeGeometry, vertices: number[], a: number, b: number, c: number) {
       return [uvAt(vertices, a), uvAt(vertices, b), uvAt(vertices, c)];
     },
-    generateSideWallUV() {
-      return [new THREE.Vector2(0, 0), new THREE.Vector2(0, 0), new THREE.Vector2(0, 0), new THREE.Vector2(0, 0)];
+    // Side walls reuse the same planar mapping; since their x/y sit on the
+    // contour, they sample the image's boundary colour — used when the side
+    // material is set to "edge colour" mode.
+    generateSideWallUV(
+      _geometry: THREE.ExtrudeGeometry,
+      vertices: number[],
+      a: number,
+      b: number,
+      c: number,
+      d: number
+    ) {
+      return [uvAt(vertices, a), uvAt(vertices, b), uvAt(vertices, c), uvAt(vertices, d)];
     },
   };
 

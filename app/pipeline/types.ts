@@ -9,6 +9,8 @@ export interface Contours {
   loops: Vec2[][];
   maskWidth: number;
   maskHeight: number;
+  /** True when the image has no transparency — keep the plain image rectangle. */
+  fullyOpaque: boolean;
 }
 
 /** Tunable inputs for a single mesh generation. Levels are 0–100 slider units. */

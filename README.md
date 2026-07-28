@@ -16,6 +16,8 @@ low — it meshes the **outline**, never one vertex per pixel:
 
 1. **Alpha mask** — the image is drawn to a size-capped canvas (≤300 px on the
    long edge) and thresholded on its alpha channel to a solid/transparent mask.
+   An image with **no transparency** is kept as-is (a plain rectangle) — its
+   outline is never traced or smoothed, so the shape is not deformed.
 2. **Boundary tracing** (`traceContours.ts`) — the solid/empty border is emitted
    as directed cell-edges (interior on the left) and stitched head-to-tail into
    closed loops (outer contours + holes) following the pixel staircase.
@@ -36,8 +38,9 @@ texture is produced entirely in the browser.
 
 | Control | Range | Effect |
 | --- | --- | --- |
-| エッジのなめらかさ / Edge smoothness | 0–100 | Contour simplification + rounding |
+| エッジのなめらかさ / Edge smoothness | 0–100 | Contour simplification + rounding (ignored for fully opaque images) |
 | 厚み / Thickness | 0–100 | Extrusion depth |
+| 側面の色 / Side color | 境界色 / 指定色 | Extrusion walls use the image's **boundary color** per region, or a single **custom color** the user picks |
 
 ## Tech
 

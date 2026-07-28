@@ -13,6 +13,8 @@ interface Mask {
   solid: Uint8Array;
   width: number;
   height: number;
+  /** True when every pixel is opaque (no transparency to cut away). */
+  fullyOpaque: boolean;
 }
 
 /** Draw `image` into a capped-size canvas and threshold its alpha channel. */
@@ -31,17 +33,22 @@ function buildMask(
   canvas.height = height;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) {
-    return { solid: new Uint8Array(0), width: 0, height: 0 };
+    return { solid: new Uint8Array(0), width: 0, height: 0, fullyOpaque: false };
   }
   context.clearRect(0, 0, width, height);
   context.drawImage(image, 0, 0, width, height);
   const { data } = context.getImageData(0, 0, width, height);
 
   const solid = new Uint8Array(width * height);
+  let fullyOpaque = true;
   for (let i = 0; i < solid.length; i += 1) {
-    solid[i] = data[i * 4 + 3] > alphaThreshold ? 1 : 0;
+    if (data[i * 4 + 3] > alphaThreshold) {
+      solid[i] = 1;
+    } else {
+      fullyOpaque = false;
+    }
   }
-  return { solid, width, height };
+  return { solid, width, height, fullyOpaque };
 }
 
 interface Edge {
@@ -64,9 +71,26 @@ export function computeContours(
   naturalHeight: number,
   alphaThreshold: number = DEFAULT_ALPHA_THRESHOLD
 ): Contours {
-  const { solid, width, height } = buildMask(image, naturalWidth, naturalHeight, alphaThreshold);
+  const { solid, width, height, fullyOpaque } = buildMask(
+    image,
+    naturalWidth,
+    naturalHeight,
+    alphaThreshold
+  );
   if (width === 0 || height === 0) {
-    return { loops: [], maskWidth: 0, maskHeight: 0 };
+    return { loops: [], maskWidth: 0, maskHeight: 0, fullyOpaque: false };
+  }
+
+  // No transparency: keep the image as-is — a plain rectangle, no silhouette to
+  // trace or smooth. Avoids the outline being rounded/deformed by smoothing.
+  if (fullyOpaque) {
+    const rectangle: Vec2[] = [
+      { x: 0, y: 0 },
+      { x: width, y: 0 },
+      { x: width, y: height },
+      { x: 0, y: height },
+    ];
+    return { loops: [rectangle], maskWidth: width, maskHeight: height, fullyOpaque: true };
   }
 
   const isSolid = (x: number, y: number) =>
@@ -134,5 +158,5 @@ export function computeContours(
     }
   }
 
-  return { loops, maskWidth: width, maskHeight: height };
+  return { loops, maskWidth: width, maskHeight: height, fullyOpaque: false };
 }

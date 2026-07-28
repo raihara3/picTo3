@@ -1,6 +1,7 @@
 "use client";
 
 import { useImageStore } from "../../store/imageStore";
+import { useSettingsStore } from "../../store/settingsStore";
 import { useImageConversion } from "../../hooks/useImageConversion";
 import { useViewerDrop } from "../../hooks/useViewerDrop";
 import { useTranslations } from "../../i18n/useTranslations";
@@ -16,8 +17,10 @@ import styles from "../../styles/page.module.scss";
  */
 export function ConvertWorkspace() {
   const source = useImageStore((state) => state.source);
+  const sideColorMode = useSettingsStore((state) => state.sideColorMode);
+  const sideColor = useSettingsStore((state) => state.sideColor);
   const { geometry } = useImageConversion();
-  const stage = useThreeStage(geometry, source);
+  const stage = useThreeStage(geometry, source, sideColorMode, sideColor);
   const { isDragging, dropProps } = useViewerDrop();
   const t = useTranslations();
 
