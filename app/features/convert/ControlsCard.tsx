@@ -17,10 +17,12 @@ const SIDE_MODES: { value: SideColorMode; labelKey: MessageKey }[] = [
 export function ControlsCard() {
   const smoothness = useSettingsStore((state) => state.smoothness);
   const thickness = useSettingsStore((state) => state.thickness);
+  const roundness = useSettingsStore((state) => state.roundness);
   const sideColorMode = useSettingsStore((state) => state.sideColorMode);
   const sideColor = useSettingsStore((state) => state.sideColor);
   const setSmoothness = useSettingsStore((state) => state.setSmoothness);
   const setThickness = useSettingsStore((state) => state.setThickness);
+  const setRoundness = useSettingsStore((state) => state.setRoundness);
   const setSideColorMode = useSettingsStore((state) => state.setSideColorMode);
   const setSideColor = useSettingsStore((state) => state.setSideColor);
   const stats = useImageStore((state) => state.stats);
@@ -52,6 +54,15 @@ export function ControlsCard() {
         step={1}
         valueText={`${thickness}%`}
         onChange={setThickness}
+      />
+      <RangeSlider
+        label={t("controls.roundness")}
+        value={roundness}
+        min={0}
+        max={100}
+        step={1}
+        valueText={`${roundness}%`}
+        onChange={setRoundness}
       />
 
       <div className={styles.sideColor}>

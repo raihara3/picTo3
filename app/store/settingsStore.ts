@@ -13,10 +13,12 @@ export const DEFAULT_SIDE_COLOR = "#c8c4bd";
 interface SettingsState {
   smoothness: number;
   thickness: number;
+  roundness: number;
   sideColorMode: SideColorMode;
   sideColor: string;
   setSmoothness: (smoothness: number) => void;
   setThickness: (thickness: number) => void;
+  setRoundness: (roundness: number) => void;
   setSideColorMode: (mode: SideColorMode) => void;
   setSideColor: (color: string) => void;
 }
@@ -24,10 +26,12 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>((set) => ({
   smoothness: 40,
   thickness: 30,
+  roundness: 0,
   sideColorMode: "edge",
   sideColor: DEFAULT_SIDE_COLOR,
   setSmoothness: (smoothness) => set({ smoothness }),
   setThickness: (thickness) => set({ thickness }),
+  setRoundness: (roundness) => set({ roundness }),
   setSideColorMode: (sideColorMode) => set({ sideColorMode }),
   setSideColor: (sideColor) => set({ sideColor }),
 }));

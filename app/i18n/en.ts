@@ -34,6 +34,7 @@ export const en: Messages = {
   "controls.settings.label": "Mesh adjustment",
   "controls.smoothness": "Edge smoothness",
   "controls.thickness": "Thickness",
+  "controls.roundness": "Roundness (front/back bulge)",
   "controls.sideColor": "Side color",
   "controls.sideColor.edge": "Edge color",
   "controls.sideColor.custom": "Custom",

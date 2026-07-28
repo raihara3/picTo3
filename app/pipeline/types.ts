@@ -19,4 +19,6 @@ export interface GenerateSettings {
   smoothness: number;
   /** Extrusion depth level. */
   thickness: number;
+  /** Front/back bulge: 0 = flat caps, 100 = fully round (ball-like). */
+  roundness: number;
 }

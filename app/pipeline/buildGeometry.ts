@@ -1,7 +1,19 @@
 import * as THREE from "three";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { Contours, GenerateSettings, Vec2 } from "./types";
-import { simplifyClosed, chaikinClosed, signedArea, pointInPolygon } from "./simplify";
+import {
+  simplifyClosed,
+  chaikinClosed,
+  decimateToMax,
+  signedArea,
+  pointInPolygon,
+} from "./simplify";
+
+/** An outer contour with its holes, in world coordinates. */
+interface ShapeGroup {
+  outer: Vec2[];
+  holes: Vec2[][];
+}
 
 export interface MeshGeometry {
   geometry: THREE.BufferGeometry;
@@ -33,6 +45,169 @@ function smoothnessParams(
 function thicknessDepth(thickness: number): number {
   const normalized = Math.min(1, Math.max(0, thickness / 100));
   return 0.03 + normalized * 0.67;
+}
+
+/** Max boundary points per loop before the rounded caps are subdivided. */
+const ROUND_OUTER_MAX = 160;
+const ROUND_HOLE_MAX = 80;
+
+/** Shortest distance from a point to a set of segments `[ax, ay, bx, by]`. */
+function distanceToSegments(point: Vec2, segments: number[][]): number {
+  let best = Infinity;
+  for (let i = 0; i < segments.length; i += 1) {
+    const [ax, ay, bx, by] = segments[i];
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lengthSquared = dx * dx + dy * dy;
+    let t = lengthSquared === 0 ? 0 : ((point.x - ax) * dx + (point.y - ay) * dy) / lengthSquared;
+    t = Math.max(0, Math.min(1, t));
+    const distance = Math.hypot(point.x - (ax + t * dx), point.y - (ay + t * dy));
+    if (distance < best) {
+      best = distance;
+    }
+  }
+  return best;
+}
+
+/**
+ * Build a rounded (inflated) geometry: the flat slab of `depth` with its front
+ * and back caps bulged outward by `roundness`. The bulge at a cap vertex follows
+ * `√(d·(2·dmax − d))` where `d` is the distance to the silhouette boundary — a
+ * hemispherical profile that pinches to zero at the edge and, for a circular
+ * silhouette, forms an exact half-sphere (front + back = a ball).
+ *
+ * Caps are triangulated (holes included), then midpoint-subdivided so there are
+ * enough interior faces to carry the curvature; the boundary is shared with the
+ * straight side walls (duplicated for a crisp edge) to avoid cracks.
+ */
+function buildPuffedGeometry(
+  groups: ShapeGroup[],
+  worldWidth: number,
+  worldHeight: number,
+  depth: number,
+  roundness: number
+): THREE.BufferGeometry {
+  const subdivisions = Math.min(3, 1 + Math.round(roundness * 2));
+
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const capIndices: number[] = [];
+  const sideIndices: number[] = [];
+
+  const pushVertex = (x: number, y: number, z: number) => {
+    const index = positions.length / 3;
+    positions.push(x, y, z);
+    uvs.push(x / worldWidth + 0.5, y / worldHeight + 0.5);
+    return index;
+  };
+
+  for (const group of groups) {
+    const outer = decimateToMax(group.outer, ROUND_OUTER_MAX);
+    const holes = group.holes.map((hole) => decimateToMax(hole, ROUND_HOLE_MAX));
+    const outerCCW = signedArea(outer) < 0 ? outer.slice().reverse() : outer;
+    const holesCW = holes.map((hole) => (signedArea(hole) > 0 ? hole.slice().reverse() : hole));
+
+    const contourV = outerCCW.map((p) => new THREE.Vector2(p.x, p.y));
+    const holesV = holesCW.map((hole) => hole.map((p) => new THREE.Vector2(p.x, p.y)));
+    const faces = THREE.ShapeUtils.triangulateShape(contourV, holesV);
+
+    // Working vertex list (indices into it) — grows as triangles subdivide.
+    const verts: Vec2[] = [...outerCCW, ...holesCW.flat()];
+    let triangles: number[][] = faces.map((face) => [face[0], face[1], face[2]]);
+
+    for (let level = 0; level < subdivisions; level += 1) {
+      const midpointCache = new Map<string, number>();
+      const midpoint = (a: number, b: number) => {
+        const key = a < b ? `${a}_${b}` : `${b}_${a}`;
+        const cached = midpointCache.get(key);
+        if (cached !== undefined) {
+          return cached;
+        }
+        const index = verts.length;
+        verts.push({ x: (verts[a].x + verts[b].x) / 2, y: (verts[a].y + verts[b].y) / 2 });
+        midpointCache.set(key, index);
+        return index;
+      };
+      const next: number[][] = [];
+      for (const [a, b, c] of triangles) {
+        const ab = midpoint(a, b);
+        const bc = midpoint(b, c);
+        const ca = midpoint(c, a);
+        next.push([a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]);
+      }
+      triangles = next;
+    }
+
+    // Distance-to-boundary field over the (decimated) outline.
+    const segments: number[][] = [];
+    const addLoop = (loop: Vec2[]) => {
+      for (let i = 0; i < loop.length; i += 1) {
+        const a = loop[i];
+        const b = loop[(i + 1) % loop.length];
+        segments.push([a.x, a.y, b.x, b.y]);
+      }
+    };
+    addLoop(outerCCW);
+    holesCW.forEach(addLoop);
+
+    const distances = verts.map((v) => distanceToSegments(v, segments));
+    let dmax = 0;
+    for (const d of distances) {
+      dmax = Math.max(dmax, d);
+    }
+    dmax = dmax || 1;
+    const bulgeAt = (index: number) => {
+      const d = distances[index];
+      return roundness * Math.sqrt(Math.max(0, d * (2 * dmax - d)));
+    };
+
+    // Front + back cap vertices (bulged), sharing the interior tessellation.
+    const frontBase = positions.length / 3;
+    for (let i = 0; i < verts.length; i += 1) {
+      pushVertex(verts[i].x, verts[i].y, depth / 2 + bulgeAt(i));
+    }
+    const backBase = positions.length / 3;
+    for (let i = 0; i < verts.length; i += 1) {
+      pushVertex(verts[i].x, verts[i].y, -depth / 2 - bulgeAt(i));
+    }
+    for (const [a, b, c] of triangles) {
+      capIndices.push(frontBase + a, frontBase + b, frontBase + c);
+      capIndices.push(backBase + a, backBase + c, backBase + b); // back reversed
+    }
+
+    // Boundary = directed edges with no reverse; extrude each into a wall quad
+    // with its own (duplicated) vertices so the cap↔side seam stays crisp.
+    const directed = new Set<string>();
+    for (const [a, b, c] of triangles) {
+      directed.add(`${a}_${b}`);
+      directed.add(`${b}_${c}`);
+      directed.add(`${c}_${a}`);
+    }
+    for (const key of Array.from(directed)) {
+      const [a, b] = key.split("_").map(Number);
+      if (directed.has(`${b}_${a}`)) {
+        continue;
+      }
+      const va = verts[a];
+      const vb = verts[b];
+      const topA = pushVertex(va.x, va.y, depth / 2);
+      const topB = pushVertex(vb.x, vb.y, depth / 2);
+      const bottomB = pushVertex(vb.x, vb.y, -depth / 2);
+      const bottomA = pushVertex(va.x, va.y, -depth / 2);
+      // Wound so the normal faces outward (right of the CCW boundary edge).
+      sideIndices.push(topA, bottomB, topB, topA, bottomA, bottomB);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(capIndices.concat(sideIndices));
+  // Group 0 = caps (textured), group 1 = side walls — matches the flat path.
+  geometry.addGroup(0, capIndices.length, 0);
+  geometry.addGroup(capIndices.length, sideIndices.length, 1);
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 /**
@@ -96,20 +271,21 @@ export function buildGeometry(
     return containing;
   });
 
-  const shapes = new Map<number, THREE.Shape>();
+  // Nest polygons into outer contours (CCW) + their holes (CW).
+  const outerToGroup = new Map<number, number>();
+  const groups: ShapeGroup[] = [];
   polygons.forEach((polygon, index) => {
     if (depths[index] % 2 === 0) {
-      // Outer contour → CCW.
       const ordered = signedArea(polygon) < 0 ? polygon.slice().reverse() : polygon;
-      shapes.set(index, new THREE.Shape(ordered.map((p) => new THREE.Vector2(p.x, p.y))));
+      outerToGroup.set(index, groups.length);
+      groups.push({ outer: ordered, holes: [] });
     }
   });
-
   polygons.forEach((polygon, index) => {
     if (depths[index] % 2 === 0) {
-      return; // outer, handled above
+      return;
     }
-    // Attach this hole to the tightest enclosing outer shape.
+    // Attach this hole to the tightest enclosing outer contour.
     let parent = -1;
     let parentDepth = -1;
     for (let other = 0; other < polygons.length; other += 1) {
@@ -123,54 +299,60 @@ export function buildGeometry(
         parentDepth = depths[other];
       }
     }
-    const shape = parent >= 0 ? shapes.get(parent) : undefined;
-    if (shape) {
-      // Hole → CW.
+    const groupIndex = parent >= 0 ? outerToGroup.get(parent) : undefined;
+    if (groupIndex !== undefined) {
       const ordered = signedArea(polygon) > 0 ? polygon.slice().reverse() : polygon;
-      shape.holes.push(new THREE.Path(ordered.map((p) => new THREE.Vector2(p.x, p.y))));
+      groups[groupIndex].holes.push(ordered);
     }
   });
-
-  const shapeList = Array.from(shapes.values());
-  if (shapeList.length === 0) {
+  if (groups.length === 0) {
     return null;
   }
 
-  // Planar UVs from world position; sides use the solid material so their UVs
-  // are irrelevant.
-  const uvAt = (vertices: number[], index: number) =>
-    new THREE.Vector2(
-      vertices[index * 3] / worldWidth + 0.5,
-      vertices[index * 3 + 1] / worldHeight + 0.5
-    );
-  const uvGenerator = {
-    generateTopUV(_geometry: THREE.ExtrudeGeometry, vertices: number[], a: number, b: number, c: number) {
-      return [uvAt(vertices, a), uvAt(vertices, b), uvAt(vertices, c)];
-    },
-    // Side walls reuse the same planar mapping; since their x/y sit on the
-    // contour, they sample the image's boundary colour — used when the side
-    // material is set to "edge colour" mode.
-    generateSideWallUV(
-      _geometry: THREE.ExtrudeGeometry,
-      vertices: number[],
-      a: number,
-      b: number,
-      c: number,
-      d: number
-    ) {
-      return [uvAt(vertices, a), uvAt(vertices, b), uvAt(vertices, c), uvAt(vertices, d)];
-    },
-  };
+  const roundness = Math.min(1, Math.max(0, settings.roundness / 100));
+  let geometry: THREE.BufferGeometry;
 
-  let geometry: THREE.BufferGeometry = new THREE.ExtrudeGeometry(shapeList, {
-    depth,
-    bevelEnabled: false,
-    steps: 1,
-    UVGenerator: uvGenerator,
-  });
-  geometry.translate(0, 0, -depth / 2); // centre the slab on the origin
-  geometry = mergeVertices(geometry);
-  geometry.computeVertexNormals();
+  if (roundness > 0) {
+    geometry = buildPuffedGeometry(groups, worldWidth, worldHeight, depth, roundness);
+  } else {
+    // Flat slab via ExtrudeGeometry. Planar cap UVs; the side walls reuse the
+    // same mapping so their x/y on the contour sample the image's boundary
+    // colour (used by the "edge colour" side material).
+    const uvAt = (vertices: number[], index: number) =>
+      new THREE.Vector2(
+        vertices[index * 3] / worldWidth + 0.5,
+        vertices[index * 3 + 1] / worldHeight + 0.5
+      );
+    const uvGenerator = {
+      generateTopUV(_g: THREE.ExtrudeGeometry, vertices: number[], a: number, b: number, c: number) {
+        return [uvAt(vertices, a), uvAt(vertices, b), uvAt(vertices, c)];
+      },
+      generateSideWallUV(
+        _g: THREE.ExtrudeGeometry,
+        vertices: number[],
+        a: number,
+        b: number,
+        c: number,
+        d: number
+      ) {
+        return [uvAt(vertices, a), uvAt(vertices, b), uvAt(vertices, c), uvAt(vertices, d)];
+      },
+    };
+    const shapeList = groups.map((group) => {
+      const shape = new THREE.Shape(group.outer.map((p) => new THREE.Vector2(p.x, p.y)));
+      group.holes.forEach((hole) => shape.holes.push(new THREE.Path(hole.map((p) => new THREE.Vector2(p.x, p.y)))));
+      return shape;
+    });
+    geometry = new THREE.ExtrudeGeometry(shapeList, {
+      depth,
+      bevelEnabled: false,
+      steps: 1,
+      UVGenerator: uvGenerator,
+    });
+    geometry.translate(0, 0, -depth / 2); // centre the slab on the origin
+    geometry = mergeVertices(geometry);
+    geometry.computeVertexNormals();
+  }
 
   const vertexCount = geometry.attributes.position.count;
   const triangleCount = geometry.index ? geometry.index.count / 3 : vertexCount / 3;

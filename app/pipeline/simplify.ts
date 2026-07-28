@@ -108,6 +108,35 @@ export function chaikinClosed(points: Vec2[], iterations: number): Vec2[] {
   return current;
 }
 
+/**
+ * Reduce a closed loop to at most `maxPoints` by escalating the Douglas–Peucker
+ * epsilon. Used to bound the boundary point count before the rounded caps are
+ * subdivided, so a low-smoothness (dense) outline can't explode the mesh.
+ */
+export function decimateToMax(points: Vec2[], maxPoints: number): Vec2[] {
+  if (points.length <= maxPoints) {
+    return points;
+  }
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const point of points) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+  const diagonal = Math.hypot(maxX - minX, maxY - minY) || 1;
+  let epsilon = diagonal / points.length;
+  let result = simplifyClosed(points, epsilon);
+  for (let guard = 0; result.length > maxPoints && guard < 24; guard += 1) {
+    epsilon *= 1.5;
+    result = simplifyClosed(points, epsilon);
+  }
+  return result.length >= 3 ? result : points;
+}
+
 /** Signed area of a polygon (positive = counter-clockwise in a y-up frame). */
 export function signedArea(points: Vec2[]): number {
   let area = 0;
