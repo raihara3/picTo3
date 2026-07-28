@@ -1,0 +1,59 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  bottom: calc(-1 * var(--space-20));
+  // Break out of the sidebar's 20px padding so the bar spans full width.
+  margin: auto calc(-1 * var(--space-20)) calc(-1 * var(--space-20));
+  padding: var(--space-12);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.info {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+
+.count {
+  font-weight: 600;
+  font-size: var(--font-size-16);
+  line-height: 20px;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  font-size: var(--font-size-11);
+  line-height: 14px;
+  color: var(--color-text-faint);
+}
+
+.save {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-12) var(--space-16);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--font-size-14);
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-strong);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}

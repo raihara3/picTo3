@@ -1,0 +1,57 @@
+.heading {
+  margin: 0;
+  font-size: var(--font-size-16);
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--color-text);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-18);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.sectionIcon {
+  display: inline-flex;
+  color: var(--color-accent);
+}
+
+.sectionLabel {
+  font-size: var(--font-size-14);
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--color-text);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.body {
+  margin: 0;
+  font-size: var(--font-size-14);
+  line-height: 18px;
+  color: var(--color-text);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--font-size-11);
+  font-weight: 600;
+  line-height: 14px;
+  color: var(--color-highlight);
+}

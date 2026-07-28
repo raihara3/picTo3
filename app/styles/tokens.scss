@@ -1,0 +1,77 @@
+// Design tokens for picTo3, shared 1:1 with the sibling gltf-light service so
+// the two tools read as one family. Scoped to `[data-app="picto3"]`; light is
+// the default and `[data-theme="dark"]` overrides the ramp.
+
+[data-app="picto3"] {
+  // Brand / accent (role-stable across themes)
+  --color-accent: #ff5b1d; // orange — section icons, primary CTA
+  --color-accent-strong: #ed4f14; // hover / pressed
+  --color-accent-soft: #ffece4; // tinted accent surface
+  --color-on-accent: #ffffff; // text/icon on an accent fill
+  --color-highlight: #2f6bff; // blue — upload icon, notes, slider fill, focus
+  --color-highlight-soft: #eaf0ff; // selected / drop background
+  --color-danger: #e5484d; // destructive action
+
+  // Surface & text ramp (light)
+  --color-bg: #f7f5f2;
+  --color-viewer-bg: #ffffff; // 3D viewer backdrop (white in light)
+  --color-surface: #ffffff; // cards, controls
+  --color-track: #eeece8; // segmented control / hover track
+  --color-border: #e6e3de;
+  --color-border-2: #d3cfc8; // visible control line
+  --color-text: #26241f;
+  --color-text-muted: #66625a;
+  --color-text-faint: #928d84; // copyright, subtitle, captions
+
+  // Radius
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-pill: 100px;
+
+  // Elevation (floating controls over the 3D canvas)
+  --shadow-sm: 0 1px 2px rgba(38, 36, 31, 0.06), 0 2px 8px rgba(38, 36, 31, 0.08);
+
+  // Spacing (8pt rhythm)
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-5: 5px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-18: 18px;
+  --space-20: 20px;
+  --space-30: 30px;
+
+  // Typography. `--font-brand` (Space Grotesk) is injected by the layout and
+  // used only for the wordmark; body text is the Japanese-first sans stack.
+  --font-brand-stack: var(--font-brand), "Hiragino Sans", system-ui, sans-serif;
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+    system-ui, sans-serif;
+
+  --font-size-9: 9px;
+  --font-size-11: 11px; // subtitle, notes, captions
+  --font-size-14: 14px; // default body
+  --font-size-16: 16px; // headings, brand
+}
+
+[data-app="picto3"][data-theme="dark"] {
+  --color-accent: #ff7a52;
+  --color-accent-strong: #ff6a3d;
+  --color-accent-soft: #3a2a22;
+  --color-highlight: #6f9bff;
+  --color-danger: #f2555a;
+
+  --color-bg: #1b1a18;
+  --color-viewer-bg: #1b1a18;
+  --color-surface: #232220;
+  --color-track: #2b2a27;
+  --color-border: #3a3833;
+  --color-border-2: #4a4842;
+  --color-text: #f4ede2;
+  --color-text-muted: #b3a99c;
+  --color-text-faint: #8f887c;
+  --color-highlight-soft: #23324d;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.5);
+}

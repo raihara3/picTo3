@@ -1,0 +1,17 @@
+.stage {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  background: var(--color-viewer-bg);
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+
+  :global(canvas) {
+    display: block;
+  }
+}

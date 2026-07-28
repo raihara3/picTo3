@@ -1,0 +1,62 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 100%;
+  padding: var(--space-18);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.icon {
+  display: inline-flex;
+  color: var(--color-accent);
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: var(--font-size-14);
+  line-height: 18px;
+  color: var(--color-text);
+}
+
+.dataArea {
+  display: flex;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.data {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-12);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.dataLabel {
+  font-size: var(--font-size-11);
+  line-height: 14px;
+  color: var(--color-text-faint);
+}
+
+.dataValue {
+  font-weight: 600;
+  font-size: var(--font-size-14);
+  line-height: 18px;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
