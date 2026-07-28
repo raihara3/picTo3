@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { AppShell } from "./components/AppShell";
 import "./styles/global.scss";
 
@@ -26,6 +27,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AppShell fontClassName={brandFont.variable}>{children}</AppShell>
+        <Analytics />
       </body>
     </html>
   );

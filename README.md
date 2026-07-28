@@ -55,6 +55,8 @@ texture is produced entirely in the browser.
 - **State**: `zustand` (`store/imageStore`, `store/settingsStore`, `store/uiStore`).
 - **Styling**: SCSS modules over design tokens (`styles/tokens.scss`), scoped to
   `[data-app="picto3"]`; light/dark theme + JA/EN, persisted to `localStorage`.
+- **Analytics**: `@vercel/analytics` (`<Analytics />` in the root layout) — only
+  reports when deployed on Vercel.
 
 ## Development
 
