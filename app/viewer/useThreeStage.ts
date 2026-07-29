@@ -7,6 +7,7 @@ import type { ImageSource } from "../store/imageStore";
 import type { SideColorMode } from "../store/settingsStore";
 import { useAnimationStore } from "../store/animationStore";
 import { ANIMATIONS, buildAnimationClip, buildAnimationClips, type AnimationId } from "../pipeline/animations";
+import { analytics } from "../lib/analytics";
 import { createTextureSource } from "./textureSource";
 
 interface StageRefs {
@@ -305,7 +306,8 @@ export function useThreeStage(
       // Export from a neutral base pose (the clips carry the motion), then
       // restore whatever was previewing.
       applyPreview(current, null);
-      const clips = buildAnimationClips(useAnimationStore.getState().exportIds, current.reference);
+      const exportIds = useAnimationStore.getState().exportIds;
+      const clips = buildAnimationClips(exportIds, current.reference);
       const finish = () => applyPreview(current, previewId);
       const exporter = new GLTFExporter();
       exporter.parse(
@@ -318,13 +320,18 @@ export function useThreeStage(
           link.download = fileName;
           link.click();
           URL.revokeObjectURL(url);
+          analytics.modelExport({
+            side_color: sideColorMode,
+            has_animation: exportIds.length > 0,
+            file_size_kb: Math.round(blob.size / 1024),
+          });
           finish();
         },
         () => finish(),
         { binary: true, animations: clips }
       );
     },
-    [previewId]
+    [previewId, sideColorMode]
   );
 
   return { containerRef, resetView, exportGlb };

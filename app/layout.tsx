@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { AppShell } from "./components/AppShell";
+import { GoogleAnalyticsTag } from "./GoogleAnalytics";
 import "./styles/global.scss";
 
 // Wordmark / brand typeface, applied only to the "picTo3" logotype.
@@ -28,6 +29,7 @@ export default function RootLayout({
       <body>
         <AppShell fontClassName={brandFont.variable}>{children}</AppShell>
         <Analytics />
+        <GoogleAnalyticsTag />
       </body>
     </html>
   );

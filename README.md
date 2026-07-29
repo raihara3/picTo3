@@ -78,8 +78,13 @@ exported from a neutral base pose so the clips carry all the motion.
 - **State**: `zustand` (`store/imageStore`, `store/settingsStore`, `store/uiStore`).
 - **Styling**: SCSS modules over design tokens (`styles/tokens.scss`), scoped to
   `[data-app="picto3"]`; light/dark theme + JA/EN, persisted to `localStorage`.
-- **Analytics**: `@vercel/analytics` (`<Analytics />` in the root layout) — only
-  reports when deployed on Vercel.
+- **Analytics**:
+  - `@vercel/analytics` (`<Analytics />` in the root layout) — visit analytics,
+    reports only when deployed on Vercel.
+  - Google Analytics 4 via `@next/third-parties` (`<GoogleAnalyticsTag />`) — a
+    no-op unless `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set (see `.env.example`).
+    Custom events (`lib/analytics.ts`): `image_upload`, and `model_export`
+    with params `side_color` (`edge`/`custom`), `has_animation`, `file_size_kb`.
 
 ## Development
 

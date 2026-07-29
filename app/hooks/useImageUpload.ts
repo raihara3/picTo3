@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { useImageStore } from "../store/imageStore";
 import { useTranslations } from "../i18n/useTranslations";
+import { analytics } from "../lib/analytics";
 
 const IMAGE_TYPE = /^image\/(png|webp|jpeg|jpg|gif)$/i;
 
@@ -47,6 +48,7 @@ export function useImageUpload() {
         naturalHeight: image.naturalHeight,
         name: file.name,
       });
+      analytics.imageUpload();
     },
     [loadImage, t]
   );
