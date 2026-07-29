@@ -44,6 +44,17 @@ export const en: Messages = {
   "stats.vertices": "Vertices",
   "stats.triangles": "Triangles",
 
+  "animation.label": "Animation",
+  "animation.hint": "Press ▶ to preview. Checked ones are added to the glb",
+  "animation.include": "Include {name} in the export",
+  "animation.preview": "Play {name}",
+  "animation.stop": "Stop",
+  "animation.float": "Floating",
+  "animation.jump": "Small jump",
+  "animation.sway": "Swaying",
+  "animation.wake": "Rise up",
+  "animation.pop": "Pop in",
+
   "export.save": "Save as glb",
 
   "footer.replace": "Choose another image",

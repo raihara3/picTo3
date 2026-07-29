@@ -5,6 +5,8 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import type { ImageSource } from "../store/imageStore";
 import type { SideColorMode } from "../store/settingsStore";
+import { useAnimationStore } from "../store/animationStore";
+import { ANIMATIONS, buildAnimationClip, buildAnimationClips, type AnimationId } from "../pipeline/animations";
 import { createTextureSource } from "./textureSource";
 
 interface StageRefs {
@@ -16,6 +18,38 @@ interface StageRefs {
   sideMaterial: THREE.MeshStandardMaterial;
   texture: THREE.Texture | null;
   mesh: THREE.Mesh | null;
+  mixer: THREE.AnimationMixer | null;
+  /** Model size (world units) used to scale animation amplitudes. */
+  reference: number;
+}
+
+/** Return a mesh to its neutral pose (used when a preview stops or on export). */
+function resetPose(mesh: THREE.Mesh) {
+  mesh.position.set(0, 0, 0);
+  mesh.quaternion.identity();
+  mesh.scale.set(1, 1, 1);
+}
+
+/** Play a single preview clip (or clear it), resetting the pose first. */
+function applyPreview(refs: StageRefs, id: AnimationId | null) {
+  const { mixer, mesh } = refs;
+  if (!mixer || !mesh) {
+    return;
+  }
+  mixer.stopAllAction();
+  resetPose(mesh);
+  if (!id) {
+    return;
+  }
+  const definition = ANIMATIONS.find((animation) => animation.id === id);
+  const action = mixer.clipAction(buildAnimationClip(id, refs.reference));
+  if (definition?.loop === "once") {
+    action.setLoop(THREE.LoopOnce, 1);
+    action.clampWhenFinished = true;
+  } else {
+    action.setLoop(THREE.LoopRepeat, Infinity);
+  }
+  action.reset().play();
 }
 
 /** Frame the camera on an object's bounding box. */
@@ -44,11 +78,13 @@ export function useThreeStage(
   geometry: THREE.BufferGeometry | null,
   source: ImageSource | null,
   sideColorMode: SideColorMode,
-  sideColor: string
+  sideColor: string,
+  previewId: AnimationId | null
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const refs = useRef<StageRefs | null>(null);
   const framedRef = useRef(false);
+  const clockRef = useRef(new THREE.Clock());
 
   // Keep the side-wall material in sync with the chosen mode/colour. In "edge"
   // mode the walls sample the image (boundary colour via the side-wall UVs); in
@@ -128,6 +164,8 @@ export function useThreeStage(
       sideMaterial,
       texture: null,
       mesh: null,
+      mixer: null,
+      reference: 1,
     };
 
     let raf = 0;
@@ -137,6 +175,8 @@ export function useThreeStage(
       if (!current) {
         return;
       }
+      const delta = clockRef.current.getDelta();
+      current.mixer?.update(delta);
       current.controls.update();
       current.renderer.render(current.scene, current.camera);
     };
@@ -214,6 +254,7 @@ export function useThreeStage(
         current.scene.remove(current.mesh);
         current.mesh.geometry.dispose();
         current.mesh = null;
+        current.mixer = null;
       }
       return;
     }
@@ -223,12 +264,30 @@ export function useThreeStage(
     } else {
       current.mesh = new THREE.Mesh(geometry, [current.capMaterial, current.sideMaterial]);
       current.scene.add(current.mesh);
+      current.mixer = new THREE.AnimationMixer(current.mesh);
     }
+    // Size reference for animation amplitudes.
+    geometry.computeBoundingBox();
+    const size = geometry.boundingBox?.getSize(new THREE.Vector3());
+    current.reference = size ? Math.max(size.x, size.y) || 1 : 1;
     if (!framedRef.current) {
       frameObject(current.camera, current.controls, current.mesh);
       framedRef.current = true;
     }
   }, [geometry]);
+
+  // ── Animation preview (one clip at a time) ───────────────────────────────
+  useEffect(() => {
+    const current = refs.current;
+    if (current) {
+      applyPreview(current, previewId);
+    }
+    return () => {
+      if (refs.current) {
+        applyPreview(refs.current, null);
+      }
+    };
+  }, [previewId, geometry]);
 
   const resetView = useCallback(() => {
     const current = refs.current;
@@ -237,29 +296,36 @@ export function useThreeStage(
     }
   }, []);
 
-  const exportGlb = useCallback((fileName: string) => {
-    const current = refs.current;
-    if (!current?.mesh) {
-      return;
-    }
-    const exporter = new GLTFExporter();
-    exporter.parse(
-      current.mesh,
-      (result) => {
-        const blob = new Blob([result as ArrayBuffer], { type: "model/gltf-binary" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = fileName;
-        link.click();
-        URL.revokeObjectURL(url);
-      },
-      () => {
-        /* export error — nothing to download */
-      },
-      { binary: true }
-    );
-  }, []);
+  const exportGlb = useCallback(
+    (fileName: string) => {
+      const current = refs.current;
+      if (!current?.mesh) {
+        return;
+      }
+      // Export from a neutral base pose (the clips carry the motion), then
+      // restore whatever was previewing.
+      applyPreview(current, null);
+      const clips = buildAnimationClips(useAnimationStore.getState().exportIds, current.reference);
+      const finish = () => applyPreview(current, previewId);
+      const exporter = new GLTFExporter();
+      exporter.parse(
+        current.mesh,
+        (result) => {
+          const blob = new Blob([result as ArrayBuffer], { type: "model/gltf-binary" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = fileName;
+          link.click();
+          URL.revokeObjectURL(url);
+          finish();
+        },
+        () => finish(),
+        { binary: true, animations: clips }
+      );
+    },
+    [previewId]
+  );
 
   return { containerRef, resetView, exportGlb };
 }

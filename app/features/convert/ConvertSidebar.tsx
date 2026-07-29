@@ -4,6 +4,7 @@ import type { StageController } from "../../viewer/useThreeStage";
 import { useTranslations } from "../../i18n/useTranslations";
 import { FileDropzone } from "../../components/FileDropzone";
 import { ControlsCard } from "./ControlsCard";
+import { AnimationCard } from "./AnimationCard";
 import { ExportBar } from "./ExportBar";
 import styles from "./ConvertSidebar.module.scss";
 
@@ -15,6 +16,7 @@ export function ConvertSidebar({ stage }: { stage: StageController }) {
       <FileDropzone />
       <h2 className={styles.heading}>{t("controls.heading")}</h2>
       <ControlsCard />
+      <AnimationCard />
       <ExportBar stage={stage} />
     </div>
   );

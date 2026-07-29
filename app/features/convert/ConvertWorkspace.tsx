@@ -2,6 +2,7 @@
 
 import { useImageStore } from "../../store/imageStore";
 import { useSettingsStore } from "../../store/settingsStore";
+import { useAnimationStore } from "../../store/animationStore";
 import { useImageConversion } from "../../hooks/useImageConversion";
 import { useViewerDrop } from "../../hooks/useViewerDrop";
 import { useTranslations } from "../../i18n/useTranslations";
@@ -19,8 +20,9 @@ export function ConvertWorkspace() {
   const source = useImageStore((state) => state.source);
   const sideColorMode = useSettingsStore((state) => state.sideColorMode);
   const sideColor = useSettingsStore((state) => state.sideColor);
+  const previewId = useAnimationStore((state) => state.previewId);
   const { geometry } = useImageConversion();
-  const stage = useThreeStage(geometry, source, sideColorMode, sideColor);
+  const stage = useThreeStage(geometry, source, sideColorMode, sideColor, previewId);
   const { isDragging, dropProps } = useViewerDrop();
   const t = useTranslations();
 

@@ -58,3 +58,15 @@ export const SunIcon = (props: IconProps) => (
 export const MoonIcon = (props: IconProps) => (
   <Icon {...props}><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" /></Icon>
 );
+export const PlayIcon = (props: IconProps) => (
+  <Icon {...props}><path d="M6 4l14 8-14 8z" fill="currentColor" stroke="none" /></Icon>
+);
+export const StopIcon = (props: IconProps) => (
+  <Icon {...props}><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor" stroke="none" /></Icon>
+);
+export const FilmIcon = (props: IconProps) => (
+  <Icon {...props}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4" /></Icon>
+);
+export const CheckIcon = (props: IconProps) => (
+  <Icon {...props}><path d="M20 6 9 17l-5-5" /></Icon>
+);

@@ -47,6 +47,29 @@ texture is produced entirely in the browser.
 | 厚み / Thickness | 0–100 | Extrusion depth |
 | 丸み / Roundness | 0–100 | Front/back bulge — 0 = flat caps, 100 = fully round (ball-like) |
 | 側面の色 / Side color | 境界色 / 指定色 | Extrusion walls use the image's **boundary color** per region, or a single **custom color** the user picks |
+| アニメーション / Animation | select | Preview and bake procedural clips into the glb (see below) |
+
+## Animation
+
+Procedural clips (`pipeline/animations.ts`) are generated in code — no DCC tool
+needed. Each is a `THREE.AnimationClip` whose tracks target the mesh root
+(`.position` / `.quaternion` / `.scale`), so the same clip drives the preview
+`AnimationMixer` and the exported glb node.
+
+| Clip | Motion | Loop |
+| --- | --- | --- |
+| ふわふわ浮遊 / Float | gentle vertical bob | loop |
+| 小さくジャンプ / Jump | periodic hop | loop |
+| ゆらゆら揺れ / Sway | side-to-side rock (Z rotation) | loop |
+| 起き上がる / Rise up | hold lying, then rise to upright (X rotation) | once |
+| ぴょーん登場 / Pop in | scale 0 → 1 with overshoot while hopping up, landing on the origin | once |
+
+The mesh origin sits at the object's **bottom-centre** (base at `y=0`), so
+rotations pivot from the base and the model rests on the origin.
+
+Preview plays one clip at a time; the checked clips are baked into the glb as
+separate named animations via `GLTFExporter` (`animations` option). The model is
+exported from a neutral base pose so the clips carry all the motion.
 
 ## Tech
 

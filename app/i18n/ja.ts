@@ -44,6 +44,17 @@ export const ja = {
   "stats.vertices": "頂点数",
   "stats.triangles": "三角形数",
 
+  "animation.label": "アニメーション",
+  "animation.hint": "▶で再生して確認。チェックしたものをglbに付与します",
+  "animation.include": "{name} を書き出しに含める",
+  "animation.preview": "{name} を再生",
+  "animation.stop": "停止",
+  "animation.float": "ふわふわ浮遊",
+  "animation.jump": "小さくジャンプ",
+  "animation.sway": "ゆらゆら揺れ",
+  "animation.wake": "起き上がる",
+  "animation.pop": "ぴょーん登場",
+
   "export.save": "glbとして保存",
 
   "footer.replace": "別の画像を選ぶ",

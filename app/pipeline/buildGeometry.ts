@@ -349,9 +349,19 @@ export function buildGeometry(
       steps: 1,
       UVGenerator: uvGenerator,
     });
-    geometry.translate(0, 0, -depth / 2); // centre the slab on the origin
+    geometry.translate(0, 0, -depth / 2); // centre the slab in depth
     geometry = mergeVertices(geometry);
     geometry.computeVertexNormals();
+  }
+
+  // Place the origin at the object's bottom-centre (x/z centred, base at y=0) so
+  // rotations pivot from the base and the model rests on the origin.
+  geometry.computeBoundingBox();
+  const bounds = geometry.boundingBox;
+  if (bounds) {
+    const centerX = (bounds.min.x + bounds.max.x) / 2;
+    const centerZ = (bounds.min.z + bounds.max.z) / 2;
+    geometry.translate(-centerX, -bounds.min.y, -centerZ);
   }
 
   const vertexCount = geometry.attributes.position.count;
